@@ -216,6 +216,94 @@ export const useAuthStore = create(
       },
 
       /**
+       * Sign up / Log in with Auth Provider (e.g. Google)
+       * @param {string} token - Auth Token
+       */
+      signupWithProvider: async (token) => {
+        set({ loading: true, error: null });
+        try {
+          const authToken = token?.startsWith("Bearer ") ? token : `Bearer ${token}`;
+          const response = await authApi.post(
+            "/createuserwithprovider",
+            {},
+            {
+              headers: {
+                Authorization: authToken,
+              },
+            }
+          );
+          const data = response.data;
+          const user = data?.user || data?.data?.user || data?.data || data;
+          const backendToken = data?.token || data?.data?.token || token;
+
+          if (backendToken) {
+            authApi.defaults.headers.common["Authorization"] = backendToken.startsWith("Bearer ")
+              ? backendToken
+              : `Bearer ${backendToken}`;
+          }
+
+          set({
+            user,
+            token: backendToken,
+            isAuthenticated: true,
+            loading: false,
+            error: null,
+          });
+
+          return data;
+        } catch (error) {
+          const message = extractErrorMessage(error);
+          set({
+            loading: false,
+            error: message,
+          });
+          throw new Error(message);
+        }
+      },
+
+      loginWithProvider: async (token) => {
+        set({ loading: true, error: null });
+        try {
+          const authToken = token?.startsWith("Bearer ") ? token : `Bearer ${token}`;
+          const response = await authApi.post(
+            "/loginuserWithProvider",
+            {},
+            {
+              headers: {
+                Authorization: authToken,
+              },
+            }
+          );
+          const data = response.data;
+          const user = data?.user || data?.data?.user || data?.data || data;
+          const backendToken = data?.token || data?.data?.token || token;
+
+          if (backendToken) {
+            authApi.defaults.headers.common["Authorization"] = backendToken.startsWith("Bearer ")
+              ? backendToken
+              : `Bearer ${backendToken}`;
+          }
+
+          set({
+            user,
+            token: backendToken,
+            isAuthenticated: true,
+            loading: false,
+            error: null,
+          });
+
+          return data;
+        } catch (error) {
+          const message = extractErrorMessage(error);
+          set({
+            loading: false,
+            error: message,
+          });
+          throw new Error(message);
+        }
+      },
+
+      /**
        * Log out the current user
        */
       logout: () => {
@@ -257,6 +345,15 @@ export const verifyOtp = (email, otp) =>
 
 export const login = (email, password) =>
   useAuthStore.getState().login(email, password);
+
+export const signupWithProvider = (token) =>
+  useAuthStore.getState().signupWithProvider(token);
+
+export const SignupWithauthProvider = (token) =>
+  useAuthStore.getState().signupWithProvider(token);
+
+export const LoginWithProvider = (token) =>
+  useAuthStore.getState().loginWithProvider(token);
 
 export const logout = () =>
   useAuthStore.getState().logout();

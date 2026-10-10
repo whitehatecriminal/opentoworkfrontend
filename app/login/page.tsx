@@ -11,6 +11,10 @@ import {
   getAuthErrorMessage,
 } from "@/src/config/providers";
 
+import {
+  LoginWithProvider
+} from "@/src/store/authstore";
+
 interface AuthErrorLike {
   code?: string;
   message?: string;
@@ -37,16 +41,28 @@ export default function LoginPage() {
     setGoogleLoading(true);
     try {
       const user = await signinWithGoogle();
-      setSuccessMessage(
-        `Welcome back, ${user.displayName || user.email || "User"}!`
-      );
+
+      const token =
+        (typeof user.getIdToken === "function"
+          ? await user.getIdToken()
+          : (user as unknown as { accessToken?: string }).accessToken) || "";
+      
+      // Send token in headers to backend
+      const res = await LoginWithProvider(token);
+      if (res?.message) {
+        setSuccessMessage(res.message);
+      } else {
+        setSuccessMessage("Account created successfully! Redirecting...");
+      }
+
       setTimeout(() => {
         router.push("/");
       }, 1000);
     } catch (err: unknown) {
+      console.error("Google Sign-In / LoginWithProvider error:", err);
       const authErr = err as AuthErrorLike;
       if (authErr?.code !== "auth/popup-closed-by-user") {
-        setErrorMessage(getAuthErrorMessage(authErr));
+        setErrorMessage(getAuthErrorMessage(authErr) || (err as Error)?.message || "Failed to sign in with Google.");
       }
     } finally {
       setGoogleLoading(false);

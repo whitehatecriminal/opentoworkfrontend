@@ -9,7 +9,7 @@ import {
   getAuthErrorMessage,
 } from "@/src/config/providers";
 import OtpVerification from "@/src/components/Otpverification";
-import { sendOtp, verifyOtp } from "@/src/store/apistore";
+import { sendOtp, verifyOtp, SignupWithauthProvider } from "@/src/store/apistore";
 
 interface AuthErrorLike {
   code?: string;
@@ -61,9 +61,19 @@ export default function SignupPage() {
     setGoogleLoading(true);
     try {
       const user = await signinWithGoogle();
-      setSuccessMessage(
-        `Welcome to Open To Work, ${user.displayName || user.email || "User"}!`
-      );
+      const token =
+        (typeof user.getIdToken === "function"
+          ? await user.getIdToken()
+          : (user as unknown as { accessToken?: string }).accessToken) || "";
+
+      // Send token in headers to backend
+      const res = await SignupWithauthProvider(token);
+      if (res?.message) {
+        setSuccessMessage(res.message);
+      } else {
+        setSuccessMessage("Account created successfully! Redirecting...");
+      }
+
       setTimeout(() => {
         router.push("/");
       }, 1000);
