@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import Provider from "@/src/store/tanstackstore";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,7 +38,11 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${jakarta.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        <Provider>
+          {children}
+        </Provider>
+      </body>
     </html>
   );
 }

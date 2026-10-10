@@ -1,0 +1,59 @@
+import axios from "axios";
+import { setupAuthInterceptors } from "@/src/store/authstore";
+
+const rawBaseUrl =
+  process.env.NEXT_PUBLIC_BASE_URL ||
+  process.env.NEXT_BASE_URL ||
+  "https://opentowork-81ic.onrender.com";
+
+const sanitizeUrl = (url) => (url ? url.replace(/\/+$/, "") : "");
+const baseURL = `${sanitizeUrl(rawBaseUrl)}/api/v1/work`;
+
+export const workEndpoints = axios.create({
+  baseURL,
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+// Automatically handle authorization headers and silent 401 refresh token retry
+setupAuthInterceptors(workEndpoints);
+
+/**
+ * Fetch paginated works from /api/v1/work/?page={page}&limit={limit}
+ * @param {Object} params - Query parameters { page, limit, search, category, status }
+ */
+export const getWorks = async ({ page = 1, limit = 10, search = "", category = "", status = "" } = {}) => {
+  const queryParams = new URLSearchParams();
+  if (page) queryParams.append("page", page.toString());
+  if (limit) queryParams.append("limit", limit.toString());
+  if (search) queryParams.append("search", search);
+  if (category && category !== "All") queryParams.append("category", category);
+  if (status && status !== "All") queryParams.append("status", status);
+
+  const queryString = queryParams.toString();
+  const url = queryString ? `/?${queryString}` : "/";
+
+  const response = await workEndpoints.get(url);
+  return response.data;
+};
+
+/**
+ * Fetch a single work item by ID
+ * @param {string} id
+ */
+export const getWorkById = async (id) => {
+  const response = await workEndpoints.get(`/${id}`);
+  return response.data;
+};
+
+/**
+ * Submit an application to a work project
+ * @param {string} workId
+ * @param {Object} payload - { proposal, bidAmount, estimatedDays, ... }
+ */
+export const applyForWork = async (workId, payload = {}) => {
+  const response = await workEndpoints.post(`/${workId}/apply`, payload);
+  return response.data;
+};

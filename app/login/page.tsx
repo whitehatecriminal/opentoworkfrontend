@@ -49,6 +49,7 @@ export default function LoginPage() {
       
       // Send token in headers to backend
       const res = await LoginWithProvider(token);
+      console.log("response", res);
       if (res?.message) {
         setSuccessMessage(res.message);
       } else {
@@ -56,7 +57,7 @@ export default function LoginPage() {
       }
 
       setTimeout(() => {
-        router.push("/");
+        router.push("/dashboard");
       }, 1000);
     } catch (err: unknown) {
       console.error("Google Sign-In / LoginWithProvider error:", err);
@@ -86,7 +87,7 @@ export default function LoginPage() {
         `Welcome back, ${user.displayName || user.email || "User"}!`
       );
       setTimeout(() => {
-        router.push("/");
+        router.push("/dashboard");
       }, 1000);
     } catch (err: unknown) {
       setErrorMessage(getAuthErrorMessage(err as AuthErrorLike));

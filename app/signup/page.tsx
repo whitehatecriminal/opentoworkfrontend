@@ -75,7 +75,7 @@ export default function SignupPage() {
       }
 
       setTimeout(() => {
-        router.push("/");
+        router.push("/dashboard");
       }, 1000);
     } catch (err: unknown) {
       const authErr = err as AuthErrorLike;
@@ -146,7 +146,7 @@ export default function SignupPage() {
     // 7. After getting success redirect user to login page
     setSuccessMessage("Registration successful! Redirecting to login page...");
     setTimeout(() => {
-      router.push("/login");
+      router.push("/dashboard");
     }, 1500);
   };
 

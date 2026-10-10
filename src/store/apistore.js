@@ -5,9 +5,20 @@ export {
   verifyOtp,
   login,
   logout,
+  refreshToken,
+  setupAuthInterceptors,
   clearAuthError,
   extractErrorMessage,
   signupWithProvider,
   SignupWithauthProvider,
-  LoginWithProvider
+  LoginWithProvider,
 } from "./authstore";
+
+export {
+  workEndpoints,
+  getWorks,
+  getWorkById,
+  applyForWork,
+} from "@/src/api/work";
+
+
