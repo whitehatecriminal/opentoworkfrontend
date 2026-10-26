@@ -10,7 +10,9 @@ import { Dashboard } from "@/src/api/user";
 
 interface ApplicationItem {
   id?: string;
-  workTitle?: string;
+  work?: {
+    title?: string;
+  }
   title?: string;
   status?: string;
   createdAt?: string | number | Date;
@@ -269,7 +271,7 @@ export default function DashboardPage() {
                   {recentApplications.map((app: ApplicationItem, idx: number) => (
                     <tr key={app.id || idx} className="hover:bg-[#FAF7F2]/50 transition-colors">
                       <td className="py-3.5 px-4 font-medium text-stone-900">
-                        {app.workTitle || app.title || "Untitled Work"}
+                        {app.work?.title || "Untitled Work"}
                       </td>
                       <td className="py-3.5 px-4 text-xs text-stone-500">
                         {app.createdAt ? new Date(app.createdAt).toLocaleDateString() : "Recently"}

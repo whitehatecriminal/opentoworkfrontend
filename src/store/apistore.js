@@ -11,7 +11,7 @@ export {
   extractErrorMessage,
   signupWithProvider,
   SignupWithauthProvider,
-  LoginWithProvider,
+  LoginWithProvider, updateWorkApplicationStatus,
 } from "./authstore";
 
 export {
@@ -19,6 +19,14 @@ export {
   getWorks,
   getWorkById,
   applyForWork,
+  createWork,
+  getUserWorks,
+  getAppliedWorks,
+  getUserAppliedWorks,
+  getTakeWorks,
+  getWorkApplications,
+  updateWorkApplicationStatus,
+  updateWork,
 } from "@/src/api/work";
 
 

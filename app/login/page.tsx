@@ -6,13 +6,13 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/src/components/Navbar";
 import {
   signinWithGoogle,
-  loginWithEmail,
   resetPassword,
   getAuthErrorMessage,
 } from "@/src/config/providers";
 
 import {
-  LoginWithProvider
+  LoginWithProvider,
+  login,
 } from "@/src/store/authstore";
 
 interface AuthErrorLike {
@@ -82,15 +82,28 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const user = await loginWithEmail(email, password);
+      const res = await login(email.trim(), password.trim());
+      console.log("Login response:", res);
+
+      const user = res?.data?.user || res?.data?.profile || res?.data?.data || null;
+      const displayName =
+        user?.name ||
+        user?.username ||
+        user?.fullName ||
+        user?.displayName ||
+        user?.email ||
+        email.trim();
+
       setSuccessMessage(
-        `Welcome back, ${user.displayName || user.email || "User"}!`
+        res?.data?.message || `Welcome back, ${displayName}!`
       );
       setTimeout(() => {
         router.push("/dashboard");
       }, 1000);
     } catch (err: unknown) {
-      setErrorMessage(getAuthErrorMessage(err as AuthErrorLike));
+      console.error("Custom backend login error:", err);
+      const errMessage = (err as Error)?.message || "Failed to sign in. Please check your credentials.";
+      setErrorMessage(errMessage);
     } finally {
       setLoading(false);
     }

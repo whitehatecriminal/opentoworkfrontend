@@ -1,41 +1,53 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/src/components/Navbar";
 import UserNavbar from "@/src/components/User/usernavbar";
+import WorkDetails from "@/src/components/explorework/workdetails";
 import { useAuthStore } from "@/src/store/authstore";
-import { getWorks, applyForWork } from "@/src/api/work";
+import { getWorks } from "@/src/api/work";
+import { htmlToPlainText } from "@/src/utils/dom.js";
 
 export interface WorkItem {
-  id?: string;
-  title?: string;
-  workTitle?: string;
-  workType?:string;
-  description?: string;
-  company?: string;
-  categoryname?: string;
-  client?: {
-    name?: string;
-    avatar?: string;
-    company?: string;
-  };
-  budget?: number | string;
-  price?: number | string;
-  fees?: number | string;
-  budgetType?: "fixed" | "hourly" | string;
-  category?: string;
-  skills?: string[];
-  tags?: string[];
-  status?: string;
-  deadline?: string | number | Date;
-  duration?: string;
+  id?: unknown;
+  title?: unknown;
+  workTitle?: unknown;
+  workType?: unknown;
+  description?: unknown;
+  company?: unknown;
+  categoryname?: unknown;
+  client?: unknown;
+  budget?: unknown;
+  price?: unknown;
+  fees?: unknown;
+  budgetType?: unknown;
+  category?: unknown;
+  skills?: unknown;
+  tags?: unknown;
+  status?: unknown;
+  deadline?: unknown;
+  duration?: unknown;
   applicantsCount?: number;
   totalApplications?: number;
-  location?: string;
-  experienceLevel?: string;
-  createdAt?: string | number | Date;
+  location?: unknown;
+  experienceLevel?: unknown;
+  createdAt?: unknown;
+  [key: string]: unknown;
+}
+
+function safeExtractString(val: unknown, fallback = ""): string {
+  if (val === null || val === undefined) return fallback;
+  if (typeof val === "string") return val;
+  if (typeof val === "number" || typeof val === "boolean") return String(val);
+  if (typeof val === "object") {
+    const obj = val as Record<string, unknown>;
+    const candidate = obj.name || obj.title || obj.label || obj.value || obj.id;
+    if (typeof candidate === "string") return candidate;
+    if (typeof candidate === "number") return String(candidate);
+    return fallback;
+  }
+  return String(val);
 }
 
 const CATEGORIES = [
@@ -50,7 +62,7 @@ const CATEGORIES = [
 ];
 
 export default function ExploreWorkPage() {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   
   // Query state
   const [currentPage, setCurrentPage] = useState(1);
@@ -60,13 +72,8 @@ export default function ExploreWorkPage() {
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [sortBy, setSortBy] = useState<"newest" | "budget-high" | "budget-low">("newest");
 
-  // Selected work for Detail Modal
-  const [activeModalWork, setActiveModalWork] = useState<WorkItem | null>(null);
-  const [proposalText, setProposalText] = useState("");
-  const [bidAmount, setBidAmount] = useState("");
-  const [applyLoading, setApplyLoading] = useState(false);
-  const [applySuccess, setApplySuccess] = useState(false);
-  const [applyError, setApplyError] = useState("");
+  // Selected work for WorkDetails Screen
+  const [selectedWork, setSelectedWork] = useState<WorkItem | null>(null);
 
   // TanStack Query for works
   const {
@@ -155,46 +162,21 @@ export default function ExploreWorkPage() {
     return list;
   }, [rawWorks, sortBy]);
 
-  // Handle Work Application Submit
-  const handleApplySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeModalWork) return;
-
-    setApplyLoading(true);
-    setApplyError("");
-    setApplySuccess(false);
-
-    try {
-      const workId = activeModalWork.id || "";
-      await applyForWork(workId, {
-        proposal: proposalText,
-        bidAmount: bidAmount ? Number(bidAmount) : undefined,
-      });
-
-      setApplySuccess(true);
-      setTimeout(() => {
-        setActiveModalWork(null);
-        setProposalText("");
-        setBidAmount("");
-        setApplySuccess(false);
-      }, 1500);
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || "Failed to submit application. Please try again.";
-      setApplyError(msg);
-    } finally {
-      setApplyLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF7F2] text-[#1C1917]">
       {/* 1. Dynamic Header */}
       {isAuthenticated ? <UserNavbar /> : <Navbar />}
 
-      {/* 2. Main Exploration Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      {/* 2. Full-Screen Work Details Screen */}
+      {selectedWork ? (
+        <WorkDetails
+          work={selectedWork}
+          workId={safeExtractString(selectedWork.id)}
+          onBack={() => setSelectedWork(null)}
+        />
+      ) : (
+        /* 3. Main Exploration Container */
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         
         {/* Header Title & Subtitle */}
         <div className="mb-8 sm:mb-10 text-center sm:text-left">
@@ -395,19 +377,23 @@ export default function ExploreWorkPage() {
         ) : (
           /* Cards Grid */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {displayWorks.map((work) => {
-              const workId = work.id;
-              const title = work.title || work.workTitle || "Untitled Project";
-              const workType = work.workType;
+            {displayWorks.map((work, idx) => {
+              const workId = safeExtractString(work.id, `work-${idx}`);
+              const title = safeExtractString(work.title || work.workTitle, "Untitled Project");
+              const workType = safeExtractString(work.workType, "ONSITE");
               const budgetVal = work.fees ?? work.budget ?? work.price ?? null;
-              const skills = Array.isArray(work.skills) ? work.skills : Array.isArray(work.tags) ? work.tags : [];
-              const applicants = work.applicantsCount ?? work.totalApplications ?? 0;
-              const statusText = work.status || "Open";
+              const rawSkills = Array.isArray(work.skills) ? work.skills : Array.isArray(work.tags) ? work.tags : [];
+              const skills = rawSkills.map((s) => safeExtractString(s, String(s)));
+              const statusText = safeExtractString(work.status, "Open");
+              const rawDesc = typeof work.description === "string" ? work.description : "";
+              const descriptionText = htmlToPlainText(rawDesc);
+
 
               return (
                 <div
                   key={workId}
-                  className="group bg-white rounded-3xl border border-[#E5DDD0] p-5 sm:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-xl hover:border-orange-300 transition-all duration-300 flex flex-col justify-between"
+                  onClick={() => setSelectedWork(work)}
+                  className="group bg-white rounded-3xl border border-[#E5DDD0] p-5 sm:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-xl hover:border-orange-300 transition-all duration-300 flex flex-col justify-between cursor-pointer"
                 >
                   <div>
                     {/* Card Top: Client & Status Badge */}
@@ -428,7 +414,7 @@ export default function ExploreWorkPage() {
 
                     {/* Description Snippet */}
                     <p className="text-xs sm:text-sm text-stone-600 line-clamp-3 mb-4 leading-relaxed">
-                      {work.description || "No description provided for this work listing."}
+                      {descriptionText || "No description provided for this work listing."}
                     </p>
 
                     {/* Skill Tags */}
@@ -464,7 +450,10 @@ export default function ExploreWorkPage() {
 
                     <button
                       type="button"
-                      onClick={() => setActiveModalWork(work)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedWork(work);
+                      }}
                       className="px-4 py-2 bg-stone-900 hover:bg-orange-600 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
                     >
                       View & Apply
@@ -528,157 +517,6 @@ export default function ExploreWorkPage() {
           </div>
         )}
       </main>
-
-      {/* 5. Work Detail & Application Modal */}
-      {activeModalWork && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-[#E5DDD0] p-6 sm:p-8 shadow-2xl relative">
-            
-            {/* Close Button */}
-            <button
-              type="button"
-              onClick={() => {
-                setActiveModalWork(null);
-                setApplyError("");
-                setApplySuccess(false);
-              }}
-              className="absolute top-6 right-6 p-2 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-full transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            {/* Modal Content Header */}
-            <div className="mb-6 pr-8">
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200 mb-2">
-                {activeModalWork.category || "General Work"}
-              </span>
-              <h2 className="text-2xl font-bold text-stone-900 font-[family-name:var(--font-playfair)]">
-                {activeModalWork.title || activeModalWork.workTitle}
-              </h2>
-            </div>
-
-            {/* Modal Details Overview Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 bg-[#FAF7F2] rounded-2xl border border-[#E5DDD0] mb-6">
-              <div>
-                <span className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider block">Budget</span>
-                <span className="text-sm font-bold text-stone-900">
-                  {(() => {
-                    const val = activeModalWork.fees ?? activeModalWork.budget ?? activeModalWork.price;
-                    if (!val) return "Negotiable";
-                    return typeof val === "number" ? `₹${val.toLocaleString()}` : `${val}`;
-                  })()}
-                </span>
-              </div>
-              <div>
-                <span className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider block">Type</span>
-                <span className="text-sm font-semibold text-stone-800 capitalize">
-                  {activeModalWork.budgetType || "Fixed Price"}
-                </span>
-              </div>
-              <div>
-                <span className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider block">Applicants</span>
-                <span className="text-sm font-semibold text-stone-800">
-                  {activeModalWork.applicantsCount ?? activeModalWork.totalApplications ?? 0} applied
-                </span>
-              </div>
-            </div>
-
-            {/* Full Description */}
-            <div className="mb-6">
-              <h4 className="text-sm font-bold text-stone-900 mb-2">Description & Deliverables</h4>
-              <p className="text-sm text-stone-600 whitespace-pre-line leading-relaxed">
-                {activeModalWork.description || "No full description provided."}
-              </p>
-            </div>
-
-            {/* Required Skills */}
-            {(activeModalWork.skills || activeModalWork.tags) && (
-              <div className="mb-8">
-                <h4 className="text-sm font-bold text-stone-900 mb-2">Required Skills</h4>
-                <div className="flex flex-wrap gap-2">
-                  {(activeModalWork.skills || activeModalWork.tags || []).map((skill, idx) => (
-                    <span
-                      key={idx}
-                      className="px-3 py-1 rounded-xl bg-stone-100 border border-stone-200 text-stone-800 text-xs font-semibold"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Application Form */}
-            <div className="border-t border-[#E5DDD0] pt-6">
-              <h3 className="text-lg font-bold text-stone-900 mb-4 font-[family-name:var(--font-playfair)]">
-                Submit Your Proposal
-              </h3>
-
-              {applySuccess ? (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-center">
-                  <p className="text-sm font-bold">🎉 Application submitted successfully!</p>
-                  <p className="text-xs text-emerald-600 mt-1">The client will review your proposal shortly.</p>
-                </div>
-              ) : (
-                <form onSubmit={handleApplySubmit} className="space-y-4">
-                  {applyError && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-medium">
-                      {applyError}
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-                      Your Proposed Bid ($ USD)
-                    </label>
-                    <input
-                      type="number"
-                      value={bidAmount}
-                      onChange={(e) => setBidAmount(e.target.value)}
-                      placeholder={activeModalWork.budget ? String(activeModalWork.budget) : "e.g. 500"}
-                      className="w-full px-4 py-2.5 bg-[#FAF7F2] border border-[#E5DDD0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-                      Cover Letter / Why are you a great fit? <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      required
-                      rows={4}
-                      value={proposalText}
-                      onChange={(e) => setProposalText(e.target.value)}
-                      placeholder="Outline your approach, relevant past experience, and estimated timeline..."
-                      className="w-full px-4 py-3 bg-[#FAF7F2] border border-[#E5DDD0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 resize-none"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-end gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setActiveModalWork(null)}
-                      className="px-4 py-2.5 border border-[#E5DDD0] bg-[#FAF7F2] hover:bg-white text-stone-700 text-xs font-semibold rounded-xl transition-all cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={applyLoading}
-                      className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-2"
-                    >
-                      {applyLoading && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-                      Submit Application
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-
-          </div>
-        </div>
       )}
     </div>
   );

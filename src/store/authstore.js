@@ -8,7 +8,7 @@ const rawBaseUrl =
   process.env.NEXT_BASE_URL ||
   "https://opentowork-81ic.onrender.com";
 
-const sanitizeUrl = (url) => (url ? url.replace(/\/+$/, "") : "");
+const sanitizeUrl = (url) => (url ? url.trim().replace(/\/+$/, "") : "");
 const AUTH_BASE_URL = `${sanitizeUrl(rawBaseUrl)}/api/v1/auth`;
 
 // Create a dedicated Axios instance for Auth API
@@ -219,8 +219,8 @@ export const useAuthStore = create(
         try {
           const response = await authApi.post("/login", payload);
           const data = response.data;
-          const user = data?.user || data?.data?.user || data?.data || data;
-          const token = data?.token || data?.data?.token || null;
+          const user = data?.user || data?.data?.user || data?.data?.profile || data?.data || data;
+          const token = data?.token || data?.accessToken || data?.data?.token || data?.data?.accessToken || null;
 
           if (token) {
             authApi.defaults.headers.common["Authorization"] = `Bearer ${token}`;
@@ -432,6 +432,9 @@ export const sendOtp = (username, email, password) =>
 
 export const verifyOtp = (email, otp) =>
   useAuthStore.getState().verifyOtp(email, otp);
+
+export const login = (email, password) =>
+  useAuthStore.getState().login(email, password);
 
 // Simple standalone functions to authenticate with provider (e.g. Firebase Google Auth)
 export const LoginWithProvider = async (token) => {

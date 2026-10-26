@@ -6,7 +6,7 @@ const rawBaseUrl =
   process.env.NEXT_BASE_URL ||
   "https://opentowork-81ic.onrender.com";
 
-const sanitizeUrl = (url) => (url ? url.replace(/\/+$/, "") : "");
+const sanitizeUrl = (url) => (url ? url.trim().replace(/\/+$/, "") : "");
 const baseURL = `${sanitizeUrl(rawBaseUrl)}/api/v1/user`;
 
 const endpoints = axios.create({
